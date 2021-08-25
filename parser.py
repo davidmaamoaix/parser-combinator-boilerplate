@@ -1,14 +1,13 @@
-def curry(func, length: int = None):
-    length = func.__code__.co_argcount if length is None else length
+class Curry:
 
-    def closure(p=[]):
-        def inner(*a):
-            params = [*p, *a]
-            return func(*params) if len(params) >= length else closure(params)
+    def __init__(self, f, params=[], length=None):
+        self.f = f
+        self.len = f.__code__.co_argcount if length is None else length
+        self.params = params
 
-        return inner
-
-    return closure()
+    def __call__(self, *a):
+        p = [*self.params, *a]
+        return self.f(*p) if len(p) >= self.len else Curry(self.f, p, self.len)
 
 
 class Functor:
@@ -55,7 +54,7 @@ class Monad(Functor):
     def _ret(cls):
         raise NotImplementedError
 
-    def __irshift__(self, f): # bind
+    def __xor__(self, f): # bind
         raise NotImplementedError
 
 
@@ -92,9 +91,9 @@ class Parser(Alternative, Monad):
     def __or__(self, other):
 
         def inner(s):
-            result = self.parse(s)
+            result = self.p(s)
 
-            return result if result else other.parse(s)
+            return result if result else other.p(s)
 
         return inner
 
@@ -102,22 +101,26 @@ class Parser(Alternative, Monad):
     def _ret(cls):
         return pure(self)
 
-    def __irshift__(self, f): # bind
+    def __xor__(self, f): # bind
 
         def inner(s):
-            return sum((f(v).parse(r) for (r, v) in self.parse(s)), [])
+            return sum((f(v).p(r) for (r, v) in self.p(s)), [])
 
         return Parser(inner)
 
 
+curry = lambda x: x if isinstance(x, Curry) else Curry(x)
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
 flip = curry(lambda f, a, b: f(b, a))
-const = lambda a, _: a
-empty = lambda t: t._empty()
-pure = lambda t: t._pure()
-ret = lambda t: t._ret()
+add = curry(lambda a, b: a + b)
+eq = curry(lambda a, b: a == b)
+const = curry(lambda a, _: a)
 
-pred = lambda p: Parser(
-    lambda s, p=p: [(s[1 :], s[0])] if s and p(s[0]) else []
-)
-char = lambda comp: pred(lambda c, comp=comp: c == comp)
+empty = Parser._empty()
+pure = Parser._pure
+wild = Parser(lambda s: [] if not s else [(s[1 :], s[0])])
+pred = lambda p, w=wild: w ^ (lambda c: pure(c) if p(c) else empty)
+char = lambda comp: pred(eq(comp))
+
+def string(s):
+    return pure('') if not s else add @ char(s[0]) * string(s[1 :])

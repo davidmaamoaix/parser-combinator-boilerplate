@@ -1,6 +1,5 @@
 from parser import *
 
 
-ab = char('a') >> char('b') >> char('c')
-
-print(ab.p('abc'))
+a = string('aa')
+print(a.p('aab'))
