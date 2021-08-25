@@ -95,7 +95,7 @@ class Parser(Alternative, Monad):
 
             return result if result else other.p(s)
 
-        return inner
+        return Parser(inner)
 
     @classmethod
     def _ret(cls):
@@ -109,10 +109,28 @@ class Parser(Alternative, Monad):
         return Parser(inner)
 
 
+def many(p):
+    def inner(s):
+        return sum((
+            (lambda result:
+                [(ro, [vo])] if not result else [(ro, [vo])] + [(ri, [vo, *vi])
+                for (ri, vi) in result]
+            )(inner(ro))
+            for (ro, vo) in p.p(s)
+        ), [])
+
+    return Parser(inner) | pure([])
+
+
+def string(s):
+    return pure('') if not s else add @ char(s[0]) * string(s[1 :])
+
+
 curry = lambda x: x if isinstance(x, Curry) else Curry(x)
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
 flip = curry(lambda f, a, b: f(b, a))
 add = curry(lambda a, b: a + b)
+join = curry(lambda a, b: [a, *b])
 eq = curry(lambda a, b: a == b)
 const = curry(lambda a, _: a)
 
@@ -121,6 +139,12 @@ pure = Parser._pure
 wild = Parser(lambda s: [] if not s else [(s[1 :], s[0])])
 pred = lambda p, w=wild: w ^ (lambda c: pure(c) if p(c) else empty)
 char = lambda comp: pred(eq(comp))
-
-def string(s):
-    return pure('') if not s else add @ char(s[0]) * string(s[1 :])
+any_of = lambda x: pred(lambda c: c in x)
+none_of = lambda x: pred(lambda c: c not in x)
+between = curry(lambda start, end, p: start >> p << end)
+many1 = lambda p: p ^ (lambda x: many(p) ^ (lambda xs: pure([x, *xs])))
+sep1 = curry(
+    lambda p, s: p ^ (lambda x: many(s >> p) ^ (lambda xs: pure([x, *xs])))
+)
+sep = lambda p, s: sep1(p, s) | pure([])
+spaces = many(any_of('\n\t '))
