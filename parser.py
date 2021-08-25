@@ -91,9 +91,7 @@ class Parser(Alternative, Monad):
     def __or__(self, other):
 
         def inner(s):
-            result = self.p(s)
-
-            return result if result else other.p(s)
+            return self.p(s) + other.p(s)
 
         return Parser(inner)
 
@@ -130,9 +128,12 @@ curry = lambda x: x if isinstance(x, Curry) else Curry(x)
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
 flip = curry(lambda f, a, b: f(b, a))
 add = curry(lambda a, b: a + b)
-join = curry(lambda a, b: [a, *b])
+prepend = curry(lambda a, b: [a, *b])
+compose = curry(lambda f, g: lambda x: f(g(x)))
 eq = curry(lambda a, b: a == b)
 const = curry(lambda a, _: a)
+tup = curry(lambda a, b: (a, b))
+join = lambda l: ''.join(l)
 
 empty = Parser._empty()
 pure = Parser._pure
@@ -148,3 +149,5 @@ sep1 = curry(
 )
 sep = lambda p, s: sep1(p, s) | pure([])
 spaces = many(any_of('\n\t '))
+digit = any_of('1234567890')
+end = Parser(lambda s: [('', '')] if not s else [])
