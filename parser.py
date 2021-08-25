@@ -1,20 +1,14 @@
 def curry(func, length: int = None):
     length = func.__code__.co_argcount if length is None else length
 
-    if length == 0:
-        return func()
+    def closure(p=[]):
+        def inner(*a):
+            params = [*p, *a]
+            return func(*params) if len(params) >= length else closure(params)
 
-    params = []
+        return inner
 
-    def inner(*a):
-        params.extend(a)
-
-        if len(a) > length:
-            raise ValueError('Too many arguments')
-
-        return func(*params) if len(params) == length else inner
-
-    return inner
+    return closure()
 
 
 class Functor:
@@ -35,10 +29,10 @@ class Applicative(Functor):
     def __mul__(self, a): # apply
         raise NotImplementedError
 
-    def __lt__(self, other):
+    def __lshift__(self, other):
         return lift2A(const)(self)(other)
 
-    def __gt__(self, other):
+    def __rshift__(self, other):
         return lift2A(flip(const))(self)(other)
 
 
@@ -117,10 +111,13 @@ class Parser(Alternative, Monad):
 
 
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
-const = curry(lambda a, _: a)
 flip = curry(lambda f, a, b: f(b, a))
+const = lambda a, _: a
 empty = lambda t: t._empty()
 pure = lambda t: t._pure()
 ret = lambda t: t._ret()
 
-
+pred = lambda p: Parser(
+    lambda s, p=p: [(s[1 :], s[0])] if s and p(s[0]) else []
+)
+char = lambda comp: pred(lambda c, comp=comp: c == comp)
