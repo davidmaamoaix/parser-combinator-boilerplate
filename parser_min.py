@@ -41,7 +41,7 @@ empty=Parser._empty()
 pure=Parser._pure
 wild=Parser(lambda s:[] if not s else [(s[1:],s[0])])
 pred=lambda p,w=wild:w^(lambda c:pure(c) if p(c) else empty)
-char=lambda comp:pred(eq(comp))
+char=lambda c:pred(eq(c))
 any_of=lambda x:pred(lambda c:c in x)
 none_of=lambda x:pred(lambda c:c not in x)
 between=curry(lambda start,end,p:start>>p<<end)
