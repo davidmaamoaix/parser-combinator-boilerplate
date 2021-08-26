@@ -127,13 +127,16 @@ def string(s):
 curry = lambda x: x if isinstance(x, Curry) else Curry(x)
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
 flip = curry(lambda f, a, b: f(b, a))
+fmap = curry(lambda f, a: f @ a)
 add = curry(lambda a, b: a + b)
 prepend = curry(lambda a, b: [a, *b])
 compose = curry(lambda f, g: lambda x: f(g(x)))
 eq = curry(lambda a, b: a == b)
 const = curry(lambda a, _: a)
 tup = curry(lambda a, b: (a, b))
-join = lambda l: ''.join(l)
+wrap_native = curry(lambda f, a: f(a))
+join = wrap_native(''.join)
+debug = wrap_native(print)
 
 empty = Parser._empty()
 pure = Parser._pure
@@ -147,7 +150,8 @@ many1 = lambda p: p ^ (lambda x: many(p) ^ (lambda xs: pure([x, *xs])))
 sep1 = curry(
     lambda p, s: p ^ (lambda x: many(s >> p) ^ (lambda xs: pure([x, *xs])))
 )
-sep = lambda p, s: sep1(p, s) | pure([])
+sep = curry(lambda p, s: sep1(p, s) | pure([]))
 spaces = many(any_of('\n\t '))
+wwrap = lambda p: spaces >> p << spaces
 digit = any_of('1234567890')
 end = Parser(lambda s: [('', '')] if not s else [])
