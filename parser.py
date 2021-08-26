@@ -51,7 +51,7 @@ class Alternative(Applicative):
 class Monad(Functor):
 
     @classmethod
-    def _ret(cls):
+    def _ret(cls, a):
         raise NotImplementedError
 
     def __xor__(self, f): # bind
@@ -96,8 +96,8 @@ class Parser(Alternative, Monad):
         return Parser(inner)
 
     @classmethod
-    def _ret(cls):
-        return pure(self)
+    def _ret(cls, a):
+        return pure(a)
 
     def __xor__(self, f): # bind
 
@@ -124,7 +124,7 @@ def string(s):
     return pure('') if not s else add @ char(s[0]) * string(s[1 :])
 
 
-curry = lambda x: x if isinstance(x, Curry) else Curry(x)
+curry = lambda x, l=None: x if isinstance(x, Curry) else Curry(x, [], l)
 lift2A = curry(lambda f, fa, fb: f @ fa * fb)
 flip = curry(lambda f, a, b: f(b, a))
 fmap = curry(lambda f, a: f @ a)
@@ -134,9 +134,8 @@ compose = curry(lambda f, g: lambda x: f(g(x)))
 eq = curry(lambda a, b: a == b)
 const = curry(lambda a, _: a)
 tup = curry(lambda a, b: (a, b))
-wrap_native = curry(lambda f, a: f(a))
-join = wrap_native(''.join)
-debug = wrap_native(print)
+join = curry(''.join, 1)
+debug = curry(print, 1)
 
 empty = Parser._empty()
 pure = Parser._pure
